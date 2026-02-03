@@ -105,7 +105,7 @@ data "aws_ssm_parameter" "amazonlinux_2" {
 resource "aws_instance" "terraform_ec2" {
   availability_zone       = "ap-northeast-1a"
   ami                     = data.aws_ssm_parameter.amazonlinux_2.value
-  disable_api_termination = true
+  disable_api_termination = false
   instance_type           = "t3.micro"
   key_name                = var.key_pair_name
   monitoring              = false
@@ -240,6 +240,7 @@ resource "aws_db_instance" "terraform_rds" {
   publicly_accessible         = false
   storage_type                = "gp2"
   vpc_security_group_ids      = [aws_security_group.terraform_rds_sg.id]
+  skip_final_snapshot         = true
 
   tags = {
     Name = "terraform-study-rds"
