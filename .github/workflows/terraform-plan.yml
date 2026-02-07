@@ -50,7 +50,7 @@ jobs:
           key_pair_name = "${{ secrets.KEY_PAIR_NAME }}" 
           CidrIp_From_Internet = "${{ secrets.CIDRIP_FROM_INTERNET }}"
           RDS_Master_User_Name = "${{ secrets.RDS_MASTER_USER_NAME }}"
-          DS_Master_User_Password = "${{ secrets.RDS_MASTER_USER_PASSWORD }}"
+          RDS_Master_User_Password = "${{ secrets.RDS_MASTER_USER_PASSWORD }}"
           My_Email_Address = "${{ secrets.MY_EMAIL_ADDRESS }}"
           EOF
 
