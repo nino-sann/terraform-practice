@@ -1,0 +1,49 @@
+#ワークフローの名前
+name: 'Terraform Plan'
+
+#terraform-planを実行するきっかけ
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+#OIDC認証のための必要な権限設定
+permissions:
+  id-token: write
+  contents: read
+
+#実行される具体的な処理
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # AWS認証: OIDCを使用して一時的な認証情報を取得
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ap-northeast-1a
+          role-to-assume: ${{secrets.AWS_ROLE_ARN}}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.3
+      
+      - name: Terraform Init
+        run: terraform init
+      
+      - name: Terraform Validate
+        run: terraform validate
+      
+      - name: Terraform Format
+        run: terraform fmt
+      
+      - name: Terraform Plan
+        run: terraform plan
+
