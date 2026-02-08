@@ -15,7 +15,7 @@ run "check_subnets_config" {
   # すべてのサブネットをまとめてループでテストする
   assert {
     condition = alltrue([
-      for key, sub in var.terraform_subnets : 
+      for key, sub in var.terraform_subnets :
       aws_subnet.terraform_subnet[key].cidr_block == sub.cidr &&
       aws_subnet.terraform_subnet[key].availability_zone == sub.zone
     ])
