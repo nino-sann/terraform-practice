@@ -37,7 +37,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.14.3
-          terraform_wrapper: false # 出力をキャプチャするために必須（デフォルトtrue）
+          terraform_wrapper: true # 出力をキャプチャするために必須（デフォルトtrue）
       
       - name: Terraform Init
         run: terraform init
