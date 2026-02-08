@@ -117,21 +117,6 @@ resource "aws_instance" "terraform_ec2" {
   }
 }
 
-resource "aws_instance" "terraform_ec2_2" {
-  availability_zone       = "ap-northeast-1a"
-  ami                     = data.aws_ssm_parameter.amazonlinux_2.value
-  disable_api_termination = false
-  instance_type           = "t3.micro"
-  key_name                = var.key_pair_name
-  monitoring              = false
-  subnet_id               = aws_subnet.terraform_subnet["public-1a"].id
-  vpc_security_group_ids  = [aws_security_group.terraform_ec2_sg.id]
-
-  tags = {
-    Name = "terraform-study-ec2-2"
-  }
-}
-
 #ALB Security Group
 resource "aws_security_group" "terraform_alb_sg" {
   description = "Security Group for ALB"

@@ -105,6 +105,7 @@ jobs:
     needs: terraform-plan  
     # mainブランチへのpush（マージ）時のみ実行する条件
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
 
     steps:
       - name: Checkout
