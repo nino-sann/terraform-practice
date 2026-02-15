@@ -8,7 +8,7 @@ resource "local_file" "ansible_inventory" {
   # 生成するファイルのパス（ansibleフォルダの中に出力）
   filename = "${path.module}/ansible/inventory/inventory.ini"
   # ファイルの内容
-  content  = <<EOT
+  content = <<EOT
 [web_servers]
 ${aws_instance.terraform_ec2.id}
 EOT

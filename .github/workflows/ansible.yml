@@ -5,6 +5,10 @@ on:
     workflows: [Terraform Plan & Apply]
     types: completed
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs: 
   ansible-deploy:
     name: Ansible deploy
