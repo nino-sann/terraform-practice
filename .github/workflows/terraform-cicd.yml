@@ -139,3 +139,8 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
     
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ansible-inventory
+          path: ansible/inventory/inventory.ini  # Terraformのlocal_fileで作ったパスを指定

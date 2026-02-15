@@ -98,6 +98,35 @@ resource "aws_security_group" "terraform_ec2_sg" {
     Name = "terraform-study-ec2-sg"
   }
 }
+# AnsibleがSSM（Systems Manager）経由でEC2を操作するために必要なIAM設定
+# 1.EC2がこのロールを使えるようにする「信頼関係」の設定
+resource "aws_iam_role" "ec2_ssm_role" {
+  name = "ec2_ssm_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+# 2. AWSが用意しているSSM用の標準ポリシーをロールに紐付ける
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
+  role       = aws_iam_role.ec2_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+# 3. EC2インスタンスにロールを付与するための「プロフィール」作成
+resource "aws_iam_instance_profile" "ec2_ssm_profile" {
+  name = "ec2-ssm-profile"
+  role = aws_iam_role.ec2_ssm_role.name
+}
 #EC2
 data "aws_ssm_parameter" "amazonlinux_2" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
@@ -111,6 +140,8 @@ resource "aws_instance" "terraform_ec2" {
   monitoring              = false
   subnet_id               = aws_subnet.terraform_subnet["public-1a"].id
   vpc_security_group_ids  = [aws_security_group.terraform_ec2_sg.id]
+
+  iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
 
   tags = {
     Name = "terraform-study-ec2"

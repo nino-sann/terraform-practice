@@ -3,6 +3,17 @@ output "EC2_Instance" {
   description = "Instance Id of the web server"
   value       = aws_instance.terraform_ec2.id
 }
+# Ansible用のinventory.iniファイルを自動生成する
+resource "local_file" "ansible_inventory" {
+  # 生成するファイルのパス（ansibleフォルダの中に出力）
+  filename = "${path.module}/ansible/inventory/inventory.ini"
+  # ファイルの内容
+  content  = <<EOT
+[web_servers]
+${aws_instance.terraform_ec2.id}
+EOT
+}
+
 output "alb_dns_name" {
   description = "DNS name of the ALB"
   value       = aws_lb.terraform_alb.dns_name

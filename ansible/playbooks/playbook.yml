@@ -1,0 +1,13 @@
+---
+- name: Install Java on EC2
+  hosts: web_servers
+  become: true # sudo権限で実施
+  tasks:
+    - name: Wait for SSM connection to be ready
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    - name: Install Java21
+      ansible.builtin.dnf:
+        name: java-21-amazon-corretto-devel.x86_64
+        state: present

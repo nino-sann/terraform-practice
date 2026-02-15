@@ -7,3 +7,7 @@
 
 # 変数ファイル（機密情報を含む場合があるため）
 *.tfvars
+
+# 自分のPCでterraform applyを叩いた場合、ローカルの ansible/ フォルダ内にファイルが作られる。
+# これをgit管理対象外にしておかないと、git add .したときにインスタンスIDが書き込まれたファイルが意図せずコミットされてしまう。
+ansible/inventory/inventory.ini
