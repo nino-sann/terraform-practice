@@ -2,10 +2,18 @@
 - name: Install Java on EC2
   hosts: web_servers
   become: true # sudo権限で実施
+  gather_facts: false
+  
+  collections:
+    - amazon.aws
+
   tasks:
     - name: Wait for SSM connection to be ready
       ansible.builtin.wait_for_connection:
         timeout: 300
+    
+    - name: Gathering Facts after connection is ready
+      ansible.builtin.setup: # ← 接続が確立された後に手動で情報収集する
 
     - name: Install Java21
       ansible.builtin.dnf:
