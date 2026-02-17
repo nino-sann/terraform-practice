@@ -7,11 +7,7 @@
   collections:
     - amazon.aws
 
-  tasks:
-    - name: Wait for SSM connection to be ready
-      ansible.builtin.wait_for_connection:
-        timeout: 300
-    
+  tasks:    
     - name: Gathering Facts after connection is ready
       ansible.builtin.setup: # ← 接続が確立された後に手動で情報収集する
 
