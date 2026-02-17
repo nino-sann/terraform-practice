@@ -40,8 +40,11 @@ jobs:
       - name: Install Ansible and AWS collection
         run: |
           pip install ansible botocore boto3
-          ansible-galaxy collection install community.aws
-      
+          ansible-galaxy collection install amazon.aws
+
+      - name: Check installed collections
+        run: ansible-galaxy collection list
+
       # 4。SSM経由で接続するための設定
       - name: Install Session Manager Plugin
         run: |
@@ -53,7 +56,7 @@ jobs:
         run: |
           ansible-inventory --list
       
-          # 5. Ansible実行    
+      # 5. Ansible実行    
       - name: Run Playbook
         working-directory: ansible
         run: |
