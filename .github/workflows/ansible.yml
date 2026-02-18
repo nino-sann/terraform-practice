@@ -42,8 +42,17 @@ jobs:
           pip install ansible botocore boto3
           ansible-galaxy collection install amazon.aws
 
-      - name: Check installed collections
-        run: ansible-galaxy collection list
+      - name: Check ansible
+        run: which ansible-playbook || true
+
+      - name: Check ansible ver
+        run: ansible --version
+
+      - name: Check installed collections ansible
+        run: ansible-galaxy collection list | grep amazon.aws
+     
+      - name: Check installed collections python
+        run: pip show boto3
 
       # 4。SSM経由で接続するための設定
       - name: Install Session Manager Plugin
@@ -64,7 +73,17 @@ jobs:
         working-directory: ansible
         run: |
           ansible-inventory -i inventory/inventory.ini --list -y
-      
+          
+      - name: Check plugin
+        working-directory: ansible
+        run: |
+          ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvv
+
+      - name: Check plugin2
+        working-directory: ansible
+        run: |
+          ansible -i inventory/inventory.ini i-056e64213c274e46a -m ping -vvv
+
       - name: Check SSM managed instance
         run: |
          aws ssm describe-instance-information \
