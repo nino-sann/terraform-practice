@@ -77,12 +77,12 @@ jobs:
       - name: Check plugin
         working-directory: ansible
         run: |
-          ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvv
+          ansible-inventory -i inventory/inventory.ini --host i-056e64213c274e46a
 
       - name: Check plugin2
         working-directory: ansible
         run: |
-          ansible -i inventory/inventory.ini i-056e64213c274e46a -m ping -vvv
+          ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvvv
 
       - name: Check SSM managed instance
         run: |
