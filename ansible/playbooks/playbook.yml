@@ -5,7 +5,7 @@
   gather_facts: false
   
   collections:
-    - amazon.aws.aws_ssm
+    - amazon.aws
 
   tasks:
     - name: Install Java21
