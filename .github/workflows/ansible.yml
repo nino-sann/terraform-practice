@@ -59,4 +59,4 @@ jobs:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
         run: |
          ansible --version
-         ansible-playbook playbooks/playbook.yml
+         ansible-playbook playbooks/playbook.yml -vvv
