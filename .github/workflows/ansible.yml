@@ -39,13 +39,6 @@ jobs:
           aws-region: ap-northeast-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
       
-      - name: check runner
-        run: aws sts get-caller-identity
-     
-      - name: check ssm
-        run: | 
-          aws ssm describe-instance-information --region ap-northeast-1 | grep i-076c36398b05e7350 -n || true
-
       # 3. 実行環境のセットアップ
       - name: Install Ansible and AWS collection
         run: |
@@ -58,17 +51,21 @@ jobs:
           curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
           sudo dpkg -i session-manager-plugin.deb
 
-      - name: ssm send command
-        run: |
-          aws ssm send-command --instance-ids i-076c36398b05e7350 --document-name "AWS-RunShellScript" 
-          --parameters commands=["echo hello"] --region ap-northeast-1
-      
-      - name: ssm list command
-        run: aws ssm list-command-invocations --instance-id i-076c36398b05e7350 --details --region ap-northeast-1
+      - name: check runner
+        run: aws sts get-caller-identity
 
-      - name: echo hellow
+      - name: echo hello
         working-directory: ansible
         run: ansible -i inventory/inventory.ini web_servers -m raw -a 'echo hello' -c aws_ssm -vvv
+      
+      - name: list command 
+        run: aws ssm list-command-invocations --instance-id i-076c36398b05e7350 --details --region ap-northeast-1
+
+      - name: ansible play log
+        run: ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvvv
+
+      - name: check creds
+        run: env | egrep 'AWS|AWS' || true
 
       # 5. Ansible実行    
       - name: Run Playbook
