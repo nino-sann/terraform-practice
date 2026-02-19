@@ -42,15 +42,23 @@ jobs:
          pip install ansible botocore boto3
          ansible-galaxy collection install amazon.aws --collections-path ~/.ansible/collections
 
-      - name: Check aws_ssm connection plugin
-        run: |
-         ansible-doc -t connection amazon.aws.aws_ssm
-
       # 4。SSM経由で接続するための設定
       - name: Install Session Manager Plugin
         run: |
           curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
           sudo dpkg -i session-manager-plugin.deb
+
+      - name: check playbook head
+        run: head -n 40 playbooks/playbook.ymlCheck aws_ssm connection plugin
+
+      - name: check plugin
+        run: ansible-doc -t connection -l | grep -i ssm  true
+
+      - name: check plugin2
+        run: ansible-doc amazon.aws.aws_ssm -t connection  true
+
+      - name: check ping
+        run: ansible -i inventory/inventory.ini i-056e64213c274e46a -m ping -c amazon.aws.aws_ssm -vvv
 
       # 5. Ansible実行    
       - name: Run Playbook
