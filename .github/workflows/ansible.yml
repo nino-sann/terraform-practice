@@ -29,6 +29,9 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: check inventory
+        run: cat inventory/inventory.ini
+
       # 2. AWS認証 (SSM接続に必要)    
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -48,20 +51,17 @@ jobs:
           curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
           sudo dpkg -i session-manager-plugin.deb
 
-      - name: check plugin
+      - name: check ansible list
         working-directory: ansible
-        run: ansible-doc -t connection -l | grep -i ssm
+        run: ansible-inventory -i inventory/inventory.ini --list -y
 
-      - name: check plugin2
+      - name: check ansible host
         working-directory: ansible
-        run: ansible-doc amazon.aws.aws_ssm -t connection
+        run: ansible-inventory -i inventory/inventory.ini --host<i-076c36398b05e7350>
 
-      - name: check ping
+      - name: SSM ping
         working-directory: ansible
-        run: ansible -i inventory/inventory.ini i-056e64213c274e46a -m ping -c amazon.aws.aws_ssm -vvv
-
-      - name: check playbook head
-        run: head -n 40 playbooks/playbook.yml
+        run: ansible -i inventory/inventory.ini web_servers -m ping -c amazon.aws.aws_ssm -vvv
 
       # 5. Ansible実行    
       - name: Run Playbook
