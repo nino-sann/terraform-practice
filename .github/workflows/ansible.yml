@@ -50,11 +50,11 @@ jobs:
 
       - name: check plugin
         working-directory: ansible
-        run: ansible-doc -t connection -l | grep -i ssm  true
+        run: ansible-doc -t connection -l | grep -i ssm
 
       - name: check plugin2
         working-directory: ansible
-        run: ansible-doc amazon.aws.aws_ssm -t connection  true
+        run: ansible-doc amazon.aws.aws_ssm -t connection
 
       - name: check ping
         working-directory: ansible
