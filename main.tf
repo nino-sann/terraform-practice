@@ -360,3 +360,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_log_config" {
   resource_arn            = aws_wafv2_web_acl.terraform_alb_waf.arn
 }
 
+resource "aws_s3_bucket" "ansible_ssm_bucket" {
+  bucket = "ansible-ssm"
+}
+
