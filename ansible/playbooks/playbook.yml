@@ -1,11 +1,9 @@
 ---
 - name: Install Java on EC2
   hosts: web_servers
+  connection: amazon.aws.aws_ssm
   become: true # sudo権限で実施
   gather_facts: false
-  
-  collections:
-    - amazon.aws
 
   tasks:
     - name: Install Java21
