@@ -62,6 +62,7 @@ jobs:
         run: aws ssm list-command-invocations --instance-id i-076c36398b05e7350 --details --region ap-northeast-1
 
       - name: ansible play log
+        working-directory: ansible
         run: ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvvv
 
       - name: check creds
