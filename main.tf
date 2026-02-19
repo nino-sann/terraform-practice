@@ -361,6 +361,6 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_log_config" {
 }
 
 resource "aws_s3_bucket" "ansible_ssm_bucket" {
-  bucket = "ansible-ssm"
+  bucket = "ansible-ssm-practice-raisetech"
 }
 
