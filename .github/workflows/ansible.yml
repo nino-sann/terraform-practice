@@ -30,7 +30,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: check inventory
-        run: cat inventory/inventory.ini
+        run: cat ansible/inventory/inventory.ini
 
       # 2. AWS認証 (SSM接続に必要)    
       - name: Configure AWS credentials
