@@ -10,7 +10,7 @@ resource "local_file" "ansible_inventory" {
   # ファイルの内容
   content = <<EOT
 [web_servers]
-${aws_instance.terraform_ec2.id}
+${aws_instance.terraform_ec2.id} ansible_aws_ssm_instance_id=${aws_instance.terraform_ec2.id}
 EOT
 }
 
