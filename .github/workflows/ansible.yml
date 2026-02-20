@@ -51,22 +51,22 @@ jobs:
           curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
           sudo dpkg -i session-manager-plugin.deb
 
-      - name: check runner
-        run: aws sts get-caller-identity
-
-      - name: echo hello
+      - name: run raw
         working-directory: ansible
-        run: ansible -i inventory/inventory.ini web_servers -m raw -a 'echo hello' -c aws_ssm -vvv
+        run: |
+          ansible -i inventory/inventory.ini web_servers -m raw -a 'bash -lc "echo HELLO; echo $HOME; whoami; 
+          which python3  true; python3 --version 2>/dev/null  true"' -c aws_ssm -vvv
       
-      - name: list command 
+      - name: check ssm
         run: aws ssm list-command-invocations --instance-id i-076c36398b05e7350 --details --region ap-northeast-1
 
-      - name: ansible play log
-        working-directory: ansible
-        run: ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvvv
-
-      - name: check creds
-        run: env | egrep 'AWS|AWS' || true
+      - name: check ssm commandid
+        run: |
+          aws ssm get-command-invocation --instance-id i-076c36398b05e7350 
+          --command-id <CommandId> --region ap-northeast-1
+      
+      - name: check ssm agent log
+        run: sudo journalctl -u amazon-ssm-agent --no-pager | tail -n 200
 
       # 5. Ansible実行    
       - name: Run Playbook
