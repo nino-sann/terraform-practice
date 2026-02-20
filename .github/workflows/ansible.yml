@@ -61,9 +61,8 @@ jobs:
         run: aws ssm list-command-invocations --instance-id i-076c36398b05e7350 --details --region ap-northeast-1
 
       - name: check ssm commandid
-        run: |
-          aws ssm get-command-invocation --instance-id i-076c36398b05e7350 
-          --command-id cbc0923d-58a9-4c44-9d92-8d6710e5642e --region ap-northeast-1
+        run: aws ssm get-command-invocation --instance-id "i-076c36398b05e7350" --command-id "cbc0923d-58a9-4c44-9d92-8d6710e5642e" --region ap-northeast-1
+
       
       - name: check ssm agent log
         run: sudo journalctl -u amazon-ssm-agent --no-pager | tail -n 200
