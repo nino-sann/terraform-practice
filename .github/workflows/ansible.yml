@@ -60,9 +60,5 @@ jobs:
           AWS_DEFAULT_REGION: ap-northeast-1  # 念のため
         run: |
          ansible --version
-         ansible-playbook playbooks/playbook.yml -vvv
-        
-      - name: ansible play log
-        working-directory: ansible
-        run: ansible-playbook -i inventory/inventory.ini playbooks/playbook.yml -vvvv
+         ansible-playbook playbooks/playbook.yml -vvvv
 
