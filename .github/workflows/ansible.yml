@@ -56,8 +56,9 @@ jobs:
 
       - name: check env
         run: env | egrep 'AWS|AWS_' || true
-
+        
       - name: check ssm run
+        working-directory: ansible
         run: |
           ansible -i inventory/inventory.ini web_servers -m raw -a 'bash -lc "echo HELLO; 
           echo $HOME; whoami"' -c aws_ssm -vvv || true
