@@ -102,7 +102,7 @@ resource "aws_security_group" "terraform_ec2_sg" {
 # 1.EC2がこのロールを使えるようにする「信頼関係」の設定
 resource "aws_iam_role" "ec2_ssm_role" {
   name = "ec2_ssm_role"
-
+  
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -125,6 +125,31 @@ resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
 resource "aws_iam_instance_profile" "ec2_ssm_profile" {
   name = "ec2-ssm-profile"
   role = aws_iam_role.ec2_ssm_role.name
+}
+# 4. AnsibleのSSM接続用S3バケットへのアクセス権限を追加
+resource "aws_iam_role_policy" "ec2_s3_ansible_policy" {
+  name = "ec2_s3_ansible_policy"
+  role = aws_iam_role.ec2_ssm_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        # 使用するバケットのARNを指定
+        Resource = [
+          "arn:aws:s3:::ansible-ssm-practice-raisetech",
+          "arn:aws:s3:::ansible-ssm-practice-raisetech/*"
+        ]
+      }
+    ]
+  })
 }
 #EC2
 data "aws_ssm_parameter" "amazonlinux_2" {
