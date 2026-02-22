@@ -58,26 +58,44 @@ jobs:
           My_Email_Address = "${{ secrets.MY_EMAIL_ADDRESS }}"
           EOF
 
+      - name: Terraform Test
+        id: test
+        run: terraform test -var-file=terraform.tfvars -no-color # コメントが読みやすいよう色コードを消す
+         # Testが失敗しても、コメント投稿まで進ませる
+        continue-on-error: true
+
       - name: Terraform Plan
         id: plan
         run: terraform plan -input=false -no-color # コメントが読みやすいよう色コードを消す
         # Planが失敗しても、コメント投稿まで進ませる
         continue-on-error: true
       
-      # PRの場合のみ、コメントを投稿する
+      # PRの場合のみ、テスト結果とPlan結果をコメント投稿する
       - name: Update Pull Request
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Format and Style 🖌
-            #### Terraform Initialization ⚙️
+            // テストの結果によって絵文字を変える
+            const testStatus = "${{ steps.test.outcome }}" === "success" ? "✅ Pass" : "❌ Failed";
+            const testOutput = process.env.TEST_OUT;
+            const planOutput = process.env.PLAN_OUT;
+
+            const output = `#### Terraform Test Result: ${testStatus}
+            <details><summary>Show Test Logs</summary>
+
+            \`\`\`text
+            ${testOutput}
+            \`\`\`
+
+            </details>
+
             #### Terraform Plan 📖
             <details><summary>Show Plan</summary>
 
             \`\`\`terraform
-            ${process.env.PLAN}
+            ${planOutput}
             \`\`\`
 
             </details>
@@ -91,10 +109,12 @@ jobs:
               body: output
             })
         env:
-          PLAN: "${{ steps.plan.outputs.stdout }}"
+          TEST_OUT: "${{ steps.test.outputs.stdout }}"
+          PLAN_OUT: "${{ steps.plan.outputs.stdout }}"
 
-      - name: Fail if plan failed
-        if: steps.plan.outcome == 'failure'
+      # 最後に、テストかプランのどちらかが失敗していたらジョブ自体を「失敗」扱いにする
+      - name: Fail if test or plan failed
+        if: steps.test.outcome == 'failure' || steps.plan.outcome == 'failure'
         run: exit 1
 
   # --- Applyジョブ：mainへのマージ（push）時のみ動く ---
