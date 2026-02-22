@@ -43,9 +43,8 @@ jobs:
       - name: Install Ansible and AWS collection
         run: |
          pip install ansible botocore boto3
-         ansible-galaxy collection install amazon.aws 
-         --collections-path ~/.ansible/collections
-       # ダウンロードしたデータの保存先を示す
+        # ansible-galaxy collection install amazon.aws --collections-path ~/.ansible/collections
+       # ダウンロードしたデータの保存先を示す Nothing to do. All requested collections are already installed.
 
       # 4. SSM経由で接続するための設定
       - name: Install Session Manager Plugin
