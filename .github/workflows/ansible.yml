@@ -43,8 +43,6 @@ jobs:
       - name: Install Ansible and AWS collection
         run: |
          pip install ansible botocore boto3
-        # ansible-galaxy collection install amazon.aws --collections-path ~/.ansible/collections
-       # ダウンロードしたデータの保存先を示す Nothing to do. All requested collections are already installed.
 
       # 4. SSM経由で接続するための設定
       - name: Install Session Manager Plugin
@@ -52,14 +50,27 @@ jobs:
           curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
           sudo dpkg -i session-manager-plugin.deb
 
-      # 5. Ansible実行    
+      # 5. 構文チェック (Syntax Check)
+      - name: Ansible Syntax Check
+        working-directory: ansible
+        run: |
+          ansible-playbook playbooks/playbook.yml --syntax-check
+
+      # 6. ドライラン (Check Mode)
+      - name: Ansible Dry Run
+        working-directory: ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          AWS_REGION: ap-northeast-1 # プラグイン（boto3）の安定動作のために必須
+        run: |
+          ansible-playbook playbooks/playbook.yml --check
+
+      # 7. Ansible実行（本番）    
       - name: Run Playbook
         working-directory: ansible
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg #明示的に
           AWS_REGION: ap-northeast-1 # プラグイン（boto3）の安定動作のために必須
-          # AWS_DEFAULT_REGION: ap-northeast-1  # 念のため
         run: |
-         ansible --version
-         ansible-playbook playbooks/playbook.yml -vvvv
+         ansible-playbook playbooks/playbook.yml -vv
 
