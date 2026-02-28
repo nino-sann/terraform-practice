@@ -18,17 +18,13 @@
          - mariadb105 # mysqlコマンドがこれに含まれる
         state: present
       become: true # sudo権限で実施
-    
-    - name: Check if git is installed
-      ansible.builtin.command: which git
-      changed_when: false
-      become: true
 
     # 2. リポジトリをダウンロード
     - name: Clone the repoitory
       ansible.builtin.git:
         repo: "{{ repo_url }}"
         dest: "{{ app_dir }}"
+      become: true
     
     # 3. 実行権限の付与
     - name: Grant execute permission to gradlew
