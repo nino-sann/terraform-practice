@@ -29,6 +29,7 @@
       ansible.builtin.git:
         repo: "{{ repo_url }}"
         dest: "{{ app_dir }}"
+      become: true
     
     # 3. 実行権限の付与
     - name: Grant execute permission to gradlew

@@ -1,4 +1,4 @@
-name: "Ansible deploy"
+name: "Ansible Deploy"
 
 on: 
   workflow_run:
