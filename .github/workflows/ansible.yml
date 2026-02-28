@@ -72,5 +72,8 @@ jobs:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg #明示的に
           AWS_REGION: ap-northeast-1 # プラグイン（boto3）の安定動作のために必須
         run: |
-         ansible-playbook playbooks/playbook.yml -vv
-
+         ansible-playbook playbooks/playbook.yml -vv \
+           --extra-vars "rds_endpoint=${{ secrets.RDS_ENDPOINT }} \
+                         db_user=${{ secrets.RDS_MASTER_USER_NAME }} \
+                         db_password=${{ secrets.RDS_MASTER_USER_PASSWORD }} \
+                         db_name=${{ secrets.RDS_DB_NAME }}"
