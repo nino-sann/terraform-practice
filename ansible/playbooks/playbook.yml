@@ -9,7 +9,7 @@
     app_dir: "/home/ec2-user/aws-study"
 
   tasks:
-    # 1. JavaとGitとMySQL(MariaDB)をインストール　sudo権限
+    # 1. JavaとGitとMySQL(MariaDB)をインストール
     - name: Install Java21 Git MySQL
       ansible.builtin.dnf:
         name: 
@@ -19,6 +19,11 @@
         state: present
       become: true # sudo権限で実施
     
+    - name: Check if git is installed
+      ansible.builtin.command: which git
+      changed_when: false
+      become: true
+
     # 2. リポジトリをダウンロード
     - name: Clone the repoitory
       ansible.builtin.git:

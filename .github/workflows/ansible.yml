@@ -1,4 +1,4 @@
-name: "Ansible deploy & Java install"
+name: "Ansible deploy"
 
 on: 
   workflow_run:
