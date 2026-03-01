@@ -34,11 +34,6 @@
         path: "{{ app_dir }}/gradlew"
         mode: '0755'
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
-
-    - name: Copy WAR to a fixed name
-      ansible.builtin.shell: |
-        cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
-      when: not ansible_check_mode
     
     # 4. テンプレートを使って設定ファイルを上書き生成する
     - name: Deploy application.properties from template
@@ -48,6 +43,14 @@
         mode: '0644'
       no_log: true # 実行ログにパスワード等を表示しない
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
+
+    # テーブルを空にする
+    - name: Clean up database table before import
+      ansible.builtin.shell: >
+        mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
+        -e "TRUNCATE TABLE student;"
+      when: not ansible_check_mode
+      ignore_errors: true # 初回実行時など、テーブルがない場合のエラーを無視する
 
     # 5. データベースに情報を書き込む
     - name: Import SQL to RDS
@@ -64,6 +67,11 @@
       changed_when: false # buildするだけで特に何も変わらないので
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
+    - name: Copy WAR to a fixed name
+      ansible.builtin.shell: |
+        cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
+      when: not ansible_check_mode
+
     # 7. serviceファイルの配置
     - name: Deploy Systemd service file
       ansible.builtin.template:
