@@ -95,4 +95,3 @@
       ansible.builtin.systemd_service:
         daemon_reload: true # serviceファイルの変更を読み取る
       become_user: root # sudo権限で実施
-# 課題43

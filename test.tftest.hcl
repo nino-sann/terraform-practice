@@ -1,4 +1,3 @@
-# 課題43
 run "check_vpc_cidr_block" {
 
   command = plan

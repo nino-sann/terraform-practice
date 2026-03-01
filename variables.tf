@@ -1,4 +1,3 @@
-# 課題43
 variable "terraform_subnets" {
   type = map(object({
     cidr      = string

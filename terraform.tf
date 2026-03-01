@@ -1,4 +1,3 @@
-# 課題43
 terraform {
   required_providers {
     aws = {
