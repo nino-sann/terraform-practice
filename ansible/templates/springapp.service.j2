@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=ec2-user
 WorkingDirectory={{ app_dir }}
-ExecStart=/usr/bin/java -jar {{ app_dir }}/build/libs/aws-study-0.0.1-SNAPSHOT.jar \
-    --spring.config.location=file:{{ app_dir }}/src/main/resources/application.properties
+ExecStart=/usr/bin/java -jar /home/ec2-user/aws-study/app.war \
+    --spring.config.location=file:/home/ec2-user/aws-study/src/main/resources/application.properties
 SuccessExitStatus=143
 Restart=always
 RestartSec=10
