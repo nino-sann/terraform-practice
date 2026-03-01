@@ -1,4 +1,3 @@
-# 課題43
 #あるととても便利
 output "EC2_Instance" {
   description = "Instance Id of the web server"
