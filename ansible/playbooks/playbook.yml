@@ -1,7 +1,8 @@
 ---
 - name: Setup and Run Spring Boot Application
   hosts: web_servers
-  become: false # ec2-userで実施
+  become: true
+  become_user: ec2-user  # デフォルトで ec2-user として動作させる
   gather_facts: false
 
   vars:
@@ -17,13 +18,14 @@
          - git
          - mariadb105 # mysqlコマンドがこれに含まれる
         state: present
-      become: true # sudo権限で実施
+      become_user: root # sudo権限で実施
 
     # 2. リポジトリをダウンロード
     - name: Clone the repoitory
       ansible.builtin.git:
         repo: "{{ repo_url }}"
         dest: "{{ app_dir }}"
+        force: true
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
     # 3. 実行権限の付与
@@ -64,7 +66,7 @@
         dest: /etc/systemd/system/springapp.service # 要確認
         mode: '0644'
       notify: Reload systemd # ファイルが変わったらdaemon-reloadを呼ぶ
-      become: true # sudo権限で実施
+      become_user: root # sudo権限で実施
     
     # 8. Spring Bootを起動して有効化する
     - name: Start and Enable Spring Boot service
@@ -72,10 +74,11 @@
         name: springapp
         state: restarted # 常に最新のビルドで再起動
         enabled: true     # OS起動時の自動起動を有効化
-      become: true
+      become_user: root # sudo権限で実施
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
 
   handlers:
     - name: Reload systemd
       ansible.builtin.systemd_service:
         daemon_reload: true # serviceファイルの変更を読み取る
+      become_user: root # sudo権限で実施
