@@ -34,6 +34,11 @@
         path: "{{ app_dir }}/gradlew"
         mode: '0755'
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
+
+    - name: Copy WAR to a fixed name
+      ansible.builtin.shell: |
+        cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
+      when: not ansible_check_mode
     
     # 4. テンプレートを使って設定ファイルを上書き生成する
     - name: Deploy application.properties from template
