@@ -70,7 +70,7 @@
     - name: Copy WAR to a fixed name
       ansible.builtin.shell: |
         cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
-      when: not ansible_check_mode
+      when: not ansible_check_mode #ドライラン時はタスクをスキップする
 
     # 7. serviceファイルの配置
     - name: Deploy Systemd service file
