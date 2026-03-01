@@ -18,13 +18,13 @@
          - mariadb105 # mysqlコマンドがこれに含まれる
         state: present
       become: true # sudo権限で実施
+      check_mode: false
 
     # 2. リポジトリをダウンロード
     - name: Clone the repoitory
       ansible.builtin.git:
         repo: "{{ repo_url }}"
         dest: "{{ app_dir }}"
-      become: true
     
     # 3. 実行権限の付与
     - name: Grant execute permission to gradlew
@@ -45,6 +45,7 @@
       ansible.builtin.shell: >
         mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
         < {{ app_dir }}/src/main/resources/create.sql
+      when: not ansible_check_mode #ドライラン時はタスクをスキップする
 
     # 6. Spring Bootを使う準備
     - name: Build application with Gradle
@@ -52,6 +53,7 @@
       args:
         chdir: "{{ app_dir }}"
       changed_when: false # buildするだけで特に何も変わらないので
+      when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
     # 7. serviceファイルの配置
     - name: Deploy Systemd service file
@@ -69,6 +71,7 @@
         state: restarted # 常に最新のビルドで再起動
         enabled: true     # OS起動時の自動起動を有効化
       become: true
+      when: not ansible_check_mode #ドライラン時はタスクをスキップする
 
   handlers:
     - name: Reload systemd
