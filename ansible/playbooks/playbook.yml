@@ -1,8 +1,8 @@
 ---
 - name: Setup and Run Spring Boot Application
   hosts: web_servers
-  become: true
-  become_user: ec2-user  # デフォルトで ec2-user として動作させる
+  # become: true
+  # become_user: ec2-user  # デフォルトで ec2-user として動作させる
   gather_facts: false
 
   vars:
@@ -10,6 +10,15 @@
     app_dir: "/home/ec2-user/aws-study"
 
   tasks:
+   # ユーザー確認
+    - name: Check initial execution user
+      ansible.builtin.command: whoami
+      register: initial_user
+
+    - name: Show initial execution user
+      ansible.builtin.debug:
+        msg: "このPlaybookの基本実行ユーザーは {{ initial_user.stdout }} です"
+  
     # 1. JavaとGitとMySQL(MariaDB)をインストール
     - name: Install Java21 Git MySQL
       ansible.builtin.dnf:
@@ -18,6 +27,7 @@
          - git
          - mariadb105 # mysqlコマンドがこれに含まれる
         state: present
+      become: true
       become_user: root # sudo権限で実施
 
     # 2. リポジトリをダウンロード
@@ -79,6 +89,7 @@
         dest: /etc/systemd/system/springapp.service # 要確認
         mode: '0644'
       notify: Reload systemd # ファイルが変わったらdaemon-reloadを呼ぶ
+      become: true
       become_user: root # sudo権限で実施
     
     # 8. Spring Bootを起動して有効化する
@@ -87,6 +98,7 @@
         name: springapp
         state: restarted # 常に最新のビルドで再起動
         enabled: true     # OS起動時の自動起動を有効化
+      become: true
       become_user: root # sudo権限で実施
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
 
@@ -94,4 +106,5 @@
     - name: Reload systemd
       ansible.builtin.systemd_service:
         daemon_reload: true # serviceファイルの変更を読み取る
+      become: true
       become_user: root # sudo権限で実施
