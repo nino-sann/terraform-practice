@@ -8,15 +8,6 @@
     app_dir: "/home/ec2-user/aws-study"
 
   tasks:
-   # ユーザー確認
-    - name: Check initial execution user
-      ansible.builtin.command: whoami
-      register: initial_user
-
-    - name: Show initial execution user
-      ansible.builtin.debug:
-        msg: "このPlaybookの基本実行ユーザーは {{ initial_user.stdout }} です"
-  
     # 1. JavaとGitとMySQL(MariaDB)をインストール
     - name: Install Java21 Git MySQL
       ansible.builtin.dnf:
@@ -28,17 +19,6 @@
       become: true
       become_user: root # sudo権限で実施
     
-   # 実行ユーザーがrootであることを確認
-    - name: Check initial execution user
-      ansible.builtin.command: whoami
-      register: user_at_root
-      become: true
-      become_user: root
-
-    - name: Show initial execution user
-      ansible.builtin.debug:
-        msg: "現在のタスク実行ユーザーは {{ user_at_root.stdout }} です"
-
     - name: ec2_user group
       block: 
         # 2. リポジトリをダウンロード
@@ -95,17 +75,6 @@
       become: true
       become_user: ec2-user
 
-    # 実行ユーザーがec2-usserであることを確認
-    - name: Check initial execution user
-      ansible.builtin.command: whoami
-      register: user_at_ec2
-      become: true
-      become_user: ec2-user
-
-    - name: Show initial execution user
-      ansible.builtin.debug:
-        msg: "現在のタスク実行ユーザーは {{ user_at_ec2.stdout }} です"
-
     # 7. serviceファイルの配置
     - name: Deploy Systemd service file
       ansible.builtin.template:
@@ -125,17 +94,6 @@
       become: true
       become_user: root # sudo権限で実施
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
-    
-    # 実行ユーザーがrootであることを確認
-    - name: Check initial execution user
-      ansible.builtin.command: whoami
-      register: user_at_root_2
-      become: true
-      become_user: root
-
-    - name: Show initial execution user
-      ansible.builtin.debug:
-        msg: "現在のタスク実行ユーザーは {{ user_at_root_2.stdout }} です"
 
   handlers:
     - name: Reload systemd
