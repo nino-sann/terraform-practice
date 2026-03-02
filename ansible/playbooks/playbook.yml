@@ -1,8 +1,6 @@
 ---
 - name: Setup and Run Spring Boot Application
   hosts: web_servers
-  # become: true
-  # become_user: ec2-user  # デフォルトで ec2-user として動作させる
   gather_facts: false
 
   vars:
@@ -29,58 +27,84 @@
         state: present
       become: true
       become_user: root # sudo権限で実施
-
-    # 2. リポジトリをダウンロード
-    - name: Clone the repoitory
-      ansible.builtin.git:
-        repo: "{{ repo_url }}"
-        dest: "{{ app_dir }}"
-        force: true
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
-    # 3. 実行権限の付与
-    - name: Grant execute permission to gradlew
-      ansible.builtin.file :
-        path: "{{ app_dir }}/gradlew"
-        mode: '0755'
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
+   # 実行ユーザーがrootであることを確認
+    - name: Check initial execution user
+      ansible.builtin.command: whoami
+      register: user_at_root
+      become: true
+      become_user: root
+
+    - name: Show initial execution user
+      ansible.builtin.debug:
+        msg: "現在のタスク実行ユーザーは {{ user_at_root.stdout }} です"
+
+    - name: ec2_user group
+      block: 
+        # 2. リポジトリをダウンロード
+        - name: Clone the repoitory
+          ansible.builtin.git:
+           repo: "{{ repo_url }}"
+           dest: "{{ app_dir }}"
+           force: true
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
-    # 4. テンプレートを使って設定ファイルを上書き生成する
-    - name: Deploy application.properties from template
-      ansible.builtin.template:
-        src: ../templates/application.properties.j2
-        dest: "{{ app_dir }}/src/main/resources/application.properties"
-        mode: '0644'
-      no_log: true # 実行ログにパスワード等を表示しない
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
-
-    # テーブルを空にする
-    - name: Clean up database table before import
-      ansible.builtin.shell: >
-        mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
-        -e "TRUNCATE TABLE student;"
-      when: not ansible_check_mode
-      ignore_errors: true # 初回実行時など、テーブルがない場合のエラーを無視する
-
-    # 5. データベースに情報を書き込む
-    - name: Import SQL to RDS
-      ansible.builtin.shell: >
-        mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
-        < {{ app_dir }}/src/main/resources/create.sql
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
-
-    # 6. Spring Bootを使う準備
-    - name: Build application with Gradle
-      ansible.builtin.command: ./gradlew build -x test
-      args:
-        chdir: "{{ app_dir }}"
-      changed_when: false # buildするだけで特に何も変わらないので
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
+        # 3. 実行権限の付与
+        - name: Grant execute permission to gradlew
+          ansible.builtin.file :
+            path: "{{ app_dir }}/gradlew"
+            mode: '0755'
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
     
-    - name: Copy WAR to a fixed name
-      ansible.builtin.shell: |
-        cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
-      when: not ansible_check_mode #ドライラン時はタスクをスキップする
+        # 4. テンプレートを使って設定ファイルを上書き生成する
+        - name: Deploy application.properties from template
+          ansible.builtin.template:
+            src: ../templates/application.properties.j2
+            dest: "{{ app_dir }}/src/main/resources/application.properties"
+            mode: '0644'
+          no_log: true # 実行ログにパスワード等を表示しない
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
+
+        # テーブルを空にする
+        - name: Clean up database table before import
+          ansible.builtin.shell: >
+             mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
+             -e "TRUNCATE TABLE student;"
+          when: not ansible_check_mode
+          ignore_errors: true # 初回実行時など、テーブルがない場合のエラーを無視する
+
+        # 5. データベースに情報を書き込む
+        - name: Import SQL to RDS
+          ansible.builtin.shell: >
+            mysql -h {{ rds_endpoint }} -u {{ db_user }} -p{{ db_password }} {{ db_name }}
+            < {{ app_dir }}/src/main/resources/create.sql
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
+
+        # 6. Spring Bootを使う準備
+        - name: Build application with Gradle
+          ansible.builtin.command: ./gradlew build -x test
+          args:
+            chdir: "{{ app_dir }}"
+          changed_when: false # buildするだけで特に何も変わらないので
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
+    
+        - name: Copy WAR to a fixed name
+          ansible.builtin.shell: |
+            cp {{ app_dir }}/build/libs/demo-0.0.1-SNAPSHOT.war {{ app_dir }}/app.war
+          when: not ansible_check_mode #ドライラン時はタスクをスキップする
+      become: true
+      become_user: ec2-user
+
+    # 実行ユーザーがec2-usserであることを確認
+    - name: Check initial execution user
+      ansible.builtin.command: whoami
+      register: user_at_ec2
+      become: true
+      become_user: ec2-user
+
+    - name: Show initial execution user
+      ansible.builtin.debug:
+        msg: "現在のタスク実行ユーザーは {{ user_at_ec2.stdout }} です"
 
     # 7. serviceファイルの配置
     - name: Deploy Systemd service file
@@ -101,6 +125,17 @@
       become: true
       become_user: root # sudo権限で実施
       when: not ansible_check_mode #ドライラン時はタスクをスキップする
+    
+    # 実行ユーザーがrootであることを確認
+    - name: Check initial execution user
+      ansible.builtin.command: whoami
+      register: user_at_root_2
+      become: true
+      become_user: root
+
+    - name: Show initial execution user
+      ansible.builtin.debug:
+        msg: "現在のタスク実行ユーザーは {{ user_at_root_2.stdout }} です"
 
   handlers:
     - name: Reload systemd
