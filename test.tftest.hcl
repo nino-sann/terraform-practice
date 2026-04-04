@@ -16,8 +16,8 @@ run "check_subnets_config" {
   assert {
     condition = alltrue([
       for key, sub in var.terraform_subnets :
-      aws_subnet.terraform_subnet[key].cidr_block == sub.cidr &&
-      aws_subnet.terraform_subnet[key].availability_zone == sub.zone
+      aws_subnet.public_private[key].cidr_block == sub.cidr &&
+      aws_subnet.public_private[key].availability_zone == sub.zone
     ])
     error_message = "サブネットの CIDR または AZ 設定が変数定義と一致しません。"
   }
@@ -76,5 +76,5 @@ run "check_rds_engine" {
     condition     = aws_db_instance.main.engine == "mysql"
     error_message = "Engine did not match expected"
   }
-
+t
 }
