@@ -1,7 +1,7 @@
 #あるととても便利
 output "EC2_Instance" {
   description = "Instance Id of the web server"
-  value       = aws_instance.terraform_ec2.id
+  value       = aws_instance.web.id
 }
 # Ansible用のinventory.iniファイルを自動生成する
 resource "local_file" "ansible_inventory" {
@@ -10,29 +10,29 @@ resource "local_file" "ansible_inventory" {
   # ファイルの内容
   content = <<EOT
 [web_servers]
-${aws_instance.terraform_ec2.id} ansible_aws_ssm_instance_id=${aws_instance.terraform_ec2.id}
+${aws_instance.web.id} ansible_aws_ssm_instance_id=${aws_instance.web.id}
 EOT
 }
 
 output "alb_dns_name" {
   description = "DNS name of the ALB"
-  value       = aws_lb.terraform_alb.dns_name
+  value       = aws_lb.main.dns_name
 }
 output "RDS_Instance" {
   description = "Endpoint of the RDS Instance"
-  value       = aws_db_instance.terraform_rds.endpoint
+  value       = aws_db_instance.main.endpoint
 }
 output "Sns_Topic_EC2" {
   description = "ARN of the SNS Topic"
-  value       = aws_sns_topic.sns_topic_ec2.arn
+  value       = aws_sns_topic.cpu_alarm.arn
 }
 
 #あると便利
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = aws_vpc.terraform_vpc.id
+  value       = aws_vpc.main.id
 }
 output "Web_ACL" {
   description = "ARN of the WebACL"
-  value       = aws_wafv2_web_acl.terraform_alb_waf.arn
+  value       = aws_wafv2_web_acl.web_application.arn
 }
