@@ -76,5 +76,4 @@ run "check_rds_engine" {
     condition     = aws_db_instance.main.engine == "mysql"
     error_message = "Engine did not match expected"
   }
-t
 }
