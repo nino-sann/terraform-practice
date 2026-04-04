@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 #VPC
-resource "aws_vpc" "terraform_vpc" {
+resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -15,16 +15,16 @@ resource "aws_vpc" "terraform_vpc" {
   }
 }
 #Internet GateWay
-resource "aws_internet_gateway" "terraform_gw" {
-  vpc_id = aws_vpc.terraform_vpc.id
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
 
   tags = {
     Name = "terraform-study-ig"
   }
 }
 #Subnet
-resource "aws_subnet" "terraform_subnet" {
-  vpc_id = aws_vpc.terraform_vpc.id
+resource "aws_subnet" "public_private" {
+  vpc_id = aws_vpc.main.id
 
   for_each = var.terraform_subnets
 
@@ -37,72 +37,74 @@ resource "aws_subnet" "terraform_subnet" {
   }
 }
 #Route Table
-resource "aws_route_table" "terraform_practice_routetable_public" {
-  vpc_id = aws_vpc.terraform_vpc.id
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.terraform_gw.id
+    gateway_id = aws_internet_gateway.igw.id
   }
 
   tags = {
     Name = "terraform-study-routetable-public"
   }
 }
-resource "aws_route_table" "terraform_practice_routetable_private" {
-  vpc_id = aws_vpc.terraform_vpc.id
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
 
   tags = {
     Name = "terraform-study-routetable-private"
   }
 }
 #ルートテーブルとサブネットを関連付け
-resource "aws_route_table_association" "terraform_association" {
+resource "aws_route_table_association" "public_private" {
   for_each = var.terraform_subnets # サブネットと同じ数だけループを回す
 
   # each.key は "public-1a" などが入る
-  subnet_id = aws_subnet.terraform_subnet[each.key].id # 作成したサブネットの ID を取得
+  subnet_id = aws_subnet.public_private[each.key].id # 作成したサブネットの ID を取得
 
   # 三項演算子でルートテーブルを切り替える
   # 条件式 ? true_value : false_value
-  route_table_id = each.value.is_public ? aws_route_table.terraform_practice_routetable_public.id : aws_route_table.terraform_practice_routetable_private.id
+  route_table_id = each.value.is_public ? aws_route_table.public.id : aws_route_table.private.id
 }
 
 #EC2 Security Group
-resource "aws_security_group" "terraform_ec2_sg" {
-  description = "Security Group for EC2"
-  name        = "EC2-SG"
-  vpc_id      = aws_vpc.terraform_vpc.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.CidrIp_From_Internet]
-  }
-  ingress {
-    from_port       = 8080
-    to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.terraform_alb_sg.id] #ALB用のセキュリティグループ
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
+resource "aws_security_group" "ec2_sg" {
+  name        = "Security Group for EC2"
+  description = "EC2-SG"
+  vpc_id      = aws_vpc.main.id
   tags = {
     Name = "terraform-study-ec2-sg"
   }
 }
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
+  security_group_id = aws_security_group.ec2_sg.id
+
+  cidr_ipv4   = var.CidrIp_From_Internet
+  from_port   = 22
+  to_port     = 22
+  ip_protocol = "tcp"
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_springboot" {
+  security_group_id = aws_security_group.ec2_sg.id
+
+  from_port                    = 8080
+  to_port                      = 8080
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.alb_sg.id #ALB用のセキュリティグループ
+}
+resource "aws_vpc_security_group_egress_rule" "allow_all_ec2" {
+  security_group_id = aws_security_group.ec2_sg.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  ip_protocol = "-1"
+}
+
 # AnsibleがSSM（Systems Manager）経由でEC2を操作するために必要なIAM設定
 # 1.EC2がこのロールを使えるようにする「信頼関係」の設定
 resource "aws_iam_role" "ec2_ssm_role" {
   name = "ec2_ssm_role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -130,15 +132,15 @@ resource "aws_iam_instance_profile" "ec2_ssm_profile" {
 data "aws_ssm_parameter" "amazonlinux_2" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
-resource "aws_instance" "terraform_ec2" {
+resource "aws_instance" "web" {
   availability_zone       = "ap-northeast-1a"
   ami                     = data.aws_ssm_parameter.amazonlinux_2.value
   disable_api_termination = false
   instance_type           = "t3.micro"
   key_name                = var.key_pair_name
   monitoring              = false
-  subnet_id               = aws_subnet.terraform_subnet["public-1a"].id
-  vpc_security_group_ids  = [aws_security_group.terraform_ec2_sg.id]
+  subnet_id               = aws_subnet.public_private["public-1a"].id
+  vpc_security_group_ids  = [aws_security_group.ec2_sg.id]
 
   iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
 
@@ -148,36 +150,35 @@ resource "aws_instance" "terraform_ec2" {
 }
 
 #ALB Security Group
-resource "aws_security_group" "terraform_alb_sg" {
-  description = "Security Group for ALB"
-  name        = "ALB-SG"
-  vpc_id      = aws_vpc.terraform_vpc.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
+resource "aws_security_group" "alb_sg" {
+  name        = "Security Group for ALB"
+  description = "ALB-SG"
+  vpc_id      = aws_vpc.main.id
   tags = {
     Name = "terraform-study-alb-sg"
   }
 }
+resource "aws_vpc_security_group_ingress_rule" "allow_http" {
+  security_group_id = aws_security_group.alb_sg.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 80
+  to_port     = 80
+  ip_protocol = "tcp"
+}
+resource "aws_vpc_security_group_egress_rule" "allow_all_alb" {
+  security_group_id = aws_security_group.alb_sg.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  ip_protocol = "-1"
+}
 #ALB
-resource "aws_lb" "terraform_alb" {
+resource "aws_lb" "main" {
   name               = "aws-study-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.terraform_alb_sg.id]
-  subnets            = [aws_subnet.terraform_subnet["public-1a"].id, aws_subnet.terraform_subnet["public-1c"].id]
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [aws_subnet.public_private["public-1a"].id, aws_subnet.public_private["public-1c"].id]
   ip_address_type    = "ipv4"
 
   tags = {
@@ -185,13 +186,13 @@ resource "aws_lb" "terraform_alb" {
   }
 }
 #ALB Target Group
-resource "aws_lb_target_group" "terraform_alb_tg" {
+resource "aws_lb_target_group" "web" {
   name        = "aws-study-alb-tg"
   target_type = "instance"
   port        = 8080
   protocol    = "HTTP"
 
-  vpc_id = aws_vpc.terraform_vpc.id
+  vpc_id = aws_vpc.main.id
 
   health_check {
     enabled             = true
@@ -209,59 +210,59 @@ resource "aws_lb_target_group" "terraform_alb_tg" {
     Name = "terraform-study-alb-tg"
   }
 }
-#Targets
-resource "aws_lb_target_group_attachment" "terraform_target_ec2" {
-  target_group_arn = aws_lb_target_group.terraform_alb_tg.arn
-  target_id        = aws_instance.terraform_ec2.id
+#ALBとTargetを紐付ける
+resource "aws_lb_target_group_attachment" "web" {
+  target_group_arn = aws_lb_target_group.web.arn
+  target_id        = aws_instance.web.id
   port             = 8080
 }
 #ALB Listener
-resource "aws_lb_listener" "terraform_alb_listener" {
-  load_balancer_arn = aws_lb.terraform_alb.arn
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.terraform_alb_tg.arn
+    target_group_arn = aws_lb_target_group.web.arn
   }
 }
 
 #RDS Subnet Group
-resource "aws_db_subnet_group" "terraform_db_subnet_group" {
+resource "aws_db_subnet_group" "this" {
   name       = "terraform-study-db-subnet-group"
-  subnet_ids = [aws_subnet.terraform_subnet["private-1a"].id, aws_subnet.terraform_subnet["private-1c"].id]
+  subnet_ids = [aws_subnet.public_private["private-1a"].id, aws_subnet.public_private["private-1c"].id]
 
   tags = {
     Name = "terraform-study-db-subnet-group"
   }
 }
 #RDS Security Group
-resource "aws_security_group" "terraform_rds_sg" {
-  description = "Security Group for RDS"
-  name        = "RDS-SG"
-  vpc_id      = aws_vpc.terraform_vpc.id
-
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.terraform_ec2_sg.id]
-  }
-
+resource "aws_security_group" "rds_sg" {
+  name        = "Security Group for RDS"
+  description = "RDS-SG"
+  vpc_id      = aws_vpc.main.id
   tags = {
     Name = "terraform-study-rds-sg"
   }
 }
+resource "aws_vpc_security_group_ingress_rule" "allow_ec2_sg" {
+  security_group_id = aws_security_group.rds_sg.id
+
+  referenced_security_group_id = aws_security_group.ec2_sg.id
+  from_port                    = 3306
+  to_port                      = 3306
+  ip_protocol                  = "tcp"
+}
 #RDS
-resource "aws_db_instance" "terraform_rds" {
+resource "aws_db_instance" "main" {
   allocated_storage           = 20
   allow_major_version_upgrade = false
   auto_minor_version_upgrade  = true
   availability_zone           = "ap-northeast-1a"
   backup_retention_period     = 1
   db_name                     = "rdsstudy"
-  db_subnet_group_name        = aws_db_subnet_group.terraform_db_subnet_group.name
+  db_subnet_group_name        = aws_db_subnet_group.this.name
   engine                      = "mysql"
   engine_version              = "8.0.43"
   instance_class              = "db.t4g.micro"
@@ -269,7 +270,7 @@ resource "aws_db_instance" "terraform_rds" {
   password                    = var.RDS_Master_User_Password
   publicly_accessible         = false
   storage_type                = "gp2"
-  vpc_security_group_ids      = [aws_security_group.terraform_rds_sg.id]
+  vpc_security_group_ids      = [aws_security_group.rds_sg.id]
   skip_final_snapshot         = true
 
   tags = {
@@ -278,13 +279,13 @@ resource "aws_db_instance" "terraform_rds" {
 }
 
 #SNS Topic
-resource "aws_sns_topic" "sns_topic_ec2" {
+resource "aws_sns_topic" "cpu_alarm" {
   display_name = "EC2 Monitoring Notifications"
   name         = "EC2-CPU-Alarm-Topic"
 }
 #SNS Subscription
-resource "aws_sns_topic_subscription" "sns_subscription_ec2" {
-  topic_arn = aws_sns_topic.sns_topic_ec2.arn
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.cpu_alarm.arn
   protocol  = "email"
   endpoint  = var.My_Email_Address
 }
@@ -301,14 +302,14 @@ resource "aws_cloudwatch_metric_alarm" "ALERT_EC2_CPUUtilization" {
   threshold           = 70
   unit                = "Percent"
   dimensions = {
-    InstanceId = aws_instance.terraform_ec2.id
+    InstanceId = aws_instance.web.id
   }
   actions_enabled = true
-  alarm_actions   = [aws_sns_topic.sns_topic_ec2.arn]
+  alarm_actions   = [aws_sns_topic.cpu_alarm.arn]
 }
 
 #WAF
-resource "aws_wafv2_web_acl" "terraform_alb_waf" {
+resource "aws_wafv2_web_acl" "web_application" {
   name  = "terraform-study-alb-waf"
   scope = "REGIONAL"
 
@@ -346,18 +347,18 @@ resource "aws_wafv2_web_acl" "terraform_alb_waf" {
 }
 #ALBにWAFを関連付ける
 resource "aws_wafv2_web_acl_association" "alb_waf_attach" {
-  resource_arn = aws_lb.terraform_alb.arn
-  web_acl_arn  = aws_wafv2_web_acl.terraform_alb_waf.arn
+  resource_arn = aws_lb.main.arn
+  web_acl_arn  = aws_wafv2_web_acl.web_application.arn
 }
 
 #WAF Log
-resource "aws_cloudwatch_log_group" "waf_logs" {
+resource "aws_cloudwatch_log_group" "web_application_waf" {
   name              = "aws-waf-logs-alb-alc"
   retention_in_days = 1
 }
-resource "aws_wafv2_web_acl_logging_configuration" "waf_log_config" {
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
-  resource_arn            = aws_wafv2_web_acl.terraform_alb_waf.arn
+resource "aws_wafv2_web_acl_logging_configuration" "web_application" {
+  log_destination_configs = [aws_cloudwatch_log_group.web_application_waf.arn]
+  resource_arn            = aws_wafv2_web_acl.web_application.arn
 }
 
 resource "aws_s3_bucket" "ansible_ssm_bucket" {
