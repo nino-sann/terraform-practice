@@ -8,13 +8,9 @@ on:
       - main
     paths-ignore:
       - 'docs/**'
-      - '**.drawio.svg'
-      - '**.md'
   pull_request:
     paths-ignore:
       - 'docs/**'
-      - '**.drawio.svg'
-      - '**.md'
 
 #  OIDC認証のための必要な権限設定
 permissions:
