@@ -18,7 +18,7 @@ Terraform・GitHub Actions・Ansibleを組み合わせ、再現性の高い環�
 | PrivateSubnet2 | 10.0.4.0/24 | ap-northeast-1c | RDSサブネットグループ用 |
 
 ## 3. CI/CDパイプラインフロー
-![パイプラインフロー図](CICD-Pipelines.drawio)
+![パイプラインフロー図](CICD-Pipelines.png)
 
 pushから自動デプロイ完了まで完全自動化をしており、人の操作は不要です。
 
