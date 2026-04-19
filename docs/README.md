@@ -82,7 +82,7 @@ pushから自動デプロイ完了まで完全自動化をしており、人の�
 
 | Secret名 | 内容 |
 |:---:|---|
-| AWS_ROLE_ARN | AnsibleがSSM経由でEC2を操作できるようにするためのロールのARN |
+| AWS_ROLE_ARN | OIDC認証を使ってAWS連携をするためのロール |
 | CIDRIP_FROM_INTERNET | EC2にSSH接続を許可する自分のIPアドレス(x.x.x.x/32) |
 | KEY_PAIR_NAME | EC2にSSH接続する際に使用する既存のキーペア名 |
 | MY_EMAIL_ADDRESS| CloudWatchアラーム通知の送信先 |
@@ -111,16 +111,21 @@ terraform destroy
 ## 8. 工夫した点
 ### セキュリティ面の配慮
 - EC2へのSSH接続は、特定のIPアドレス(/32)からのみ許可し、0.0.0.0/0は禁止
-- RDSのマスターユーザーパスワードは、sensitive設定で非表示
 - 各種パスワードなど機密情報はGitHub Secretsで管理し、コードには一切含めない
+- GitHub ActionsのAWS認証について、OIDC認証を採用しセキュリティを強化
 
 ### IaCによる環境の再現性
 - CloudFormationテンプレートを参考に、Terraformで同等の構成をコード化
 - サブネットの作成に関して、for_eachを使用し、コードの簡略化
+- サブネットとルートテーブルの紐付けを、三項演算子を使用して、1つのコードで完結
 
 ## 9. 苦労した点・学び
+- ssm接続
+- 異なるサービス同士を接続するのは難しい
+- cloudformationは繰り返しコードを書かなければいけなかったが、terraformは関数を使用できるので、スッキリした
 
 ## 10. 今後の改善点
+- HTTPSの対応
 
 
 
