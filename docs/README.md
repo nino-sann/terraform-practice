@@ -1,7 +1,6 @@
 ## 1. プロジェクト概要
 ### 受講生情報表示アプリ 自動デプロイパイプライン
-GitHubへのpushをトリガーに、インフラ構築からアプリのデプロイまでを完全自動化したCI/CDパイプラインです。
-
+GitHubへのpushをトリガーに、インフラ構築からアプリのデプロイまでを完全自動化したCI/CDパイプラインです。  
 Terraform・GitHub Actions・Ansibleを組み合わせ、再現性の高い環境構築を実現しています。
 
 ## 2. システム構成
@@ -83,16 +82,16 @@ pushから自動デプロイ完了まで完全自動化をしており、人の�
 
 | Secret名 | 内容 |
 |:---:|---|
-| AWS_ACCESS_KEY_ID | IAMユーザーのアクセスキー |
-| EC2 | t3.micro |
-| RDS | db.t4g.micro |
-| ALB | Application Load Balancer |
-| WAFv2 | AWS WAF |
-| CloudWatch | Alarm |
-| SNS | Topic/Subscription |
-| CloudWatch Logs | Log Group |
+| AWS_ROLE_ARN | AnsibleがSSM経由でEC2を操作できるようにするためのロールのARN |
+| CIDRIP_FROM_INTERNET | EC2にSSH接続を許可する自分のIPアドレス(x.x.x.x/32) |
+| KEY_PAIR_NAME | EC2にSSH接続する際に使用する既存のキーペア名 |
+| MY_EMAIL_ADDRESS| CloudWatchアラーム通知の送信先 |
+| RDS_DB_NAME | データベースの名前 |
+| RDS_ENDPOINT | RDSの接続先 |
+| RDS_MASTER_USER_NAME | RDSマスターユーザー名 |
+| RDS_MASTER_USER_PASSWORD | RDSマスターユーザーのパスワード |
 
-### 7.3 デブロイの実行
+### 7.3 デプロイの実行
 mainブランチにpushするだけで、GitHub Actionsが自動的にデプロイを実行します。
 
 ```zsh
@@ -102,13 +101,26 @@ git push origin ブランチ名
 ```
 
 ### 7.4 環境の削除
-AWSリソースは使用後に削除してください。
-
+AWSリソースは使用後に削除してください。  
 削除しないと料金が発生し続けます。
 
 ```zsh
 terraform destroy
 ```
+
+## 8. 工夫した点
+### セキュリティ面の配慮
+- EC2へのSSH接続は、特定のIPアドレス(/32)からのみ許可し、0.0.0.0/0は禁止
+- RDSのマスターユーザーパスワードは、sensitive設定で非表示
+- 各種パスワードなど機密情報はGitHub Secretsで管理し、コードには一切含めない
+
+### IaCによる環境の再現性
+- CloudFormationテンプレートを参考に、Terraformで同等の構成をコード化
+- サブネットの作成に関して、for_eachを使用し、コードの簡略化
+
+## 9. 苦労した点・学び
+
+## 10. 今後の改善点
 
 
 
