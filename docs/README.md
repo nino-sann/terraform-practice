@@ -19,7 +19,7 @@ Terraform・GitHub Actions・Ansibleを組み合わせ、再現性の高い環�
 ## 3. CI/CDパイプラインフロー
 ![パイプラインフロー図](CICD-Pipelines.png)
 
-pushから自動デプロイ完了まで完全自動化をしており、人の操作は不要です。
+pushからデプロイ完了まで自動化をしています。(apply実行時のみ人の手による承認が必要)
 
 ## 4. 使用技術
 | カテゴリ | 技術 | バージョン |
@@ -92,7 +92,7 @@ pushから自動デプロイ完了まで完全自動化をしており、人の�
 | RDS_MASTER_USER_PASSWORD | RDSマスターユーザーのパスワード |
 
 ### 7.3 デプロイの実行
-mainブランチにpushするだけで、GitHub Actionsが自動的にデプロイを実行します。
+mainブランチにpushするだけで、GitHub Actionsが自動的にデプロイを実行します。(apply時には人の手による承認が必要)
 
 ```zsh
 git add .
@@ -109,23 +109,118 @@ terraform destroy
 ```
 
 ## 8. 工夫した点
-### セキュリティ面の配慮
-- EC2へのSSH接続は、特定のIPアドレス(/32)からのみ許可し、0.0.0.0/0は禁止
-- 各種パスワードなど機密情報はGitHub Secretsで管理し、コードには一切含めない
-- GitHub ActionsのAWS認証について、OIDC認証を採用しセキュリティを強化
+### Terraformのfor_eachと三項演算子による柔軟なリソース管理
+- 4つのサブネットを作成する際にfor_eachを活用し、1つのリソースブロックで複数リソースを定義できるように工夫しました
 
-### IaCによる環境の再現性
-- CloudFormationテンプレートを参考に、Terraformで同等の構成をコード化
-- サブネットの作成に関して、for_eachを使用し、コードの簡略化
-- サブネットとルートテーブルの紐付けを、三項演算子を使用して、1つのコードで完結
+mian.tf
+```hcl
+resource "aws_subnet" "public_private" {
+  vpc_id = aws_vpc.main.id
+
+  for_each = var.terraform_subnets
+
+  availability_zone       = each.value.zone
+  cidr_block              = each.value.cidr
+  map_public_ip_on_launch = each.value.launch
+
+  tags = {
+    Name = each.value.name
+  }
+}
+```
+variables.tf
+```hcl
+variable "terraform_subnets" {
+  type = map(object({
+    cidr      = string
+    zone      = string
+    launch    = bool # 文字列 "true" ではなく 真偽値 bool
+    name      = string
+    is_public = bool # 文字列 "true" ではなく 真偽値 bool
+  }))
+
+  default = {
+    public-1a = {
+      cidr      = "10.0.1.0/24"
+      zone      = "ap-northeast-1a"
+      launch    = true
+      name      = "terraform-study-public-subnet1"
+      is_public = true
+    }
+    public-1c = {
+      cidr      = "10.0.3.0/24"
+      zone      = "ap-northeast-1c"
+      launch    = true
+      name      = "terraform-study-public-subnet2"
+      is_public = true
+    }
+    private-1a = {
+      cidr      = "10.0.2.0/24"
+      zone      = "ap-northeast-1a"
+      launch    = false
+      name      = "terraform-study-private-subnet1"
+      is_public = false
+    }
+    private-1c = {
+      cidr      = "10.0.4.0/24"
+      zone      = "ap-northeast-1c"
+      launch    = false
+      name      = "terraform-study-private-subnet2"
+      is_public = false
+    }
+  }
+}
+```
+- ルートテーブルとサブネットを関連付ける際にもfor_eachを活用し、サブネットと同じ数だけループを回すようにしました
+- 三項演算子を用いて、条件によって関連付けるルートテーブルを切り替えるようにし、コードの重複を排除しました
+
+main.tf
+```hcl
+resource "aws_route_table_association" "public_private" {
+  for_each = var.terraform_subnets # サブネットと同じ数だけループを回す
+
+  # each.key は "public-1a" などが入る
+  subnet_id = aws_subnet.public_private[each.key].id # 作成したサブネットの ID を取得
+
+  # 三項演算子でルートテーブルを切り替える
+  # 条件式 ? true_value : false_value
+  route_table_id = each.value.is_public ? aws_route_table.public.id : aws_route_table.private.id
+}
+```
+ 
+### セキュリティ面の配慮
+- EC2へのSSH接続は、特定のIPアドレス(/32)からのみ許可し、0.0.0.0/0は禁止しました
+- 各種パスワードなど機密情報はGitHub Secretsで管理し、コードには一切含めないようにしました
+- Environment機能を利用し、apply実行時は人の手による承認を必要としました
+- GitHub ActionsのAWS認証について、OIDC認証を採用しセキュリティを強化しました
+- AnsibleとAWSの接続について、SSM接続を採用しセキュリティを強化しました
 
 ## 9. 苦労した点・学び
-- ssm接続
-- 異なるサービス同士を接続するのは難しい
-- cloudformationは繰り返しコードを書かなければいけなかったが、terraformは関数を使用できるので、スッキリした
+### AnsibleとAWSのSSM接続設定
+AnsibleからEC2への接続に、SSHではなくAWS Systems Manager(SSM)を使う構成を試みましたが、接続がうまく確立できずに詰まりました。  
+原因を調査した結果、group_vars/all.yamlの配置ミスのため、Ansibleが接続に必要な変数を見つけられないことが原因でした。  
+group_vars/all.yamlを下記のように配置し直した結果、無事にSSM接続が確立できました。
+- 変更前
+```text
+```
+
+- 変更後
+```text
+.
+├── ansible
+│   ├── ansible.cfg
+│   ├── inventory
+│   │   └── group_vars
+│   │       └── all.yml
+│   └── playbooks
+│       └── playbook.yml
+```
+
+### IaC
+cloudformationは繰り返しコードを書かなければいけなかったが、terraformは関数を使用できるので、スッキリした
 
 ## 10. 今後の改善点
-- HTTPSの対応
+- HTTPSの対応：ACMを用いたSSL証明書の取得とALBのHTTS化(ポート443)
 
 
 
