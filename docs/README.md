@@ -1,6 +1,6 @@
 ## 1. プロジェクト概要
 ### 受講生情報表示アプリ 自動デプロイパイプライン
-GitHubへのpushをトリガーに、インフラ構築からアプリのデプロイまでを完全自動化したCI/CDパイプラインです。  
+GitHubへのpushをトリガーに、インフラ構築からアプリのデプロイまでを自動化したCI/CDパイプラインです。  
 Terraform・GitHub Actions・Ansibleを組み合わせ、再現性の高い環境構築を実現しています。
 
 ## 2. システム構成
@@ -96,7 +96,7 @@ mainブランチにpushするだけで、GitHub Actionsが自動的にデプロ�
 
 ```zsh
 git add .
-git commit -m ""
+git commit -m "feat: update application"
 git push origin ブランチ名
 ```
 
@@ -111,6 +111,8 @@ terraform destroy
 ## 8. 工夫した点
 ### Terraformのfor_eachと三項演算子による柔軟なリソース管理
 - 4つのサブネットを作成する際にfor_eachを活用し、1つのリソースブロックで複数リソースを定義できるように工夫しました
+- CloudFormationでは同等の構成を繰り返しコードで記述する必要がありましたが、Terraformのfor_eachを使うことで1つのブロックに集約でき、IaCの再利用性を実感しました
+
 
 mian.tf
 ```hcl
@@ -171,8 +173,7 @@ variable "terraform_subnets" {
   }
 }
 ```
-- ルートテーブルとサブネットを関連付ける際にもfor_eachを活用し、サブネットと同じ数だけループを回すようにしました
-- 三項演算子を用いて、条件によって関連付けるルートテーブルを切り替えるようにし、コードの重複を排除しました
+- ルートテーブルとサブネットを関連付ける際にもfor_eachを活用し、三項演算子で条件によって関連付けるルートテーブルを切り替えることで、コードの重複を排除しました
 
 main.tf
 ```hcl
@@ -192,16 +193,24 @@ resource "aws_route_table_association" "public_private" {
 - EC2へのSSH接続は、特定のIPアドレス(/32)からのみ許可し、0.0.0.0/0は禁止しました
 - 各種パスワードなど機密情報はGitHub Secretsで管理し、コードには一切含めないようにしました
 - Environment機能を利用し、apply実行時は人の手による承認を必要としました
-- GitHub ActionsのAWS認証について、OIDC認証を採用しセキュリティを強化しました
-- AnsibleとAWSの接続について、SSM接続を採用しセキュリティを強化しました
+- GitHub ActionsのAWS認証にOIDC認証を採用し、長期的なアクセスキーを使わない構成にしました
+- AnsibleとEC2の接続にSSM接続を採用し、SSHポートを開放しない構成にしました
 
 ## 9. 苦労した点・学び
 ### AnsibleとAWSのSSM接続設定
 AnsibleからEC2への接続に、SSHではなくAWS Systems Manager(SSM)を使う構成を試みましたが、接続がうまく確立できずに詰まりました。  
-原因を調査した結果、group_vars/all.yamlの配置ミスのため、Ansibleが接続に必要な変数を見つけられないことが原因でした。  
-group_vars/all.yamlを下記のように配置し直した結果、無事にSSM接続が確立できました。
+原因を調査した結果、group_vars/all.ymlの配置ミスにより、Ansibleが設定ファイルを正しく読み込めていないことが原因でした。  
+以下のようにファイルをinventory/配下に移動したところ、SSM接続が確立できました。  
 - 変更前
-```text
+```textterraform-practice
+.
+├── ansible
+│   ├── ansible.cfg
+│   ├── group_vars
+│   │   └── all.yml　　　　　←ここに置いていた
+│   ├── inventory
+│   └── playbooks
+│       └── playbook.yml
 ```
 
 - 変更後
@@ -211,21 +220,14 @@ group_vars/all.yamlを下記のように配置し直した結果、無事にSSM�
 │   ├── ansible.cfg
 │   ├── inventory
 │   │   └── group_vars
-│   │       └── all.yml
+│   │       └── all.yml　　←inventory/ 配下に移動
 │   └── playbooks
 │       └── playbook.yml
 ```
-
-### IaC
-cloudformationは繰り返しコードを書かなければいけなかったが、terraformは関数を使用できるので、スッキリした
+この経験を通じて、ディレクトリ構成の重要性を実感しました。
 
 ## 10. 今後の改善点
-- HTTPSの対応：ACMを用いたSSL証明書の取得とALBのHTTS化(ポート443)
-
-
-
-
-
-
+- HTTPSの対応：ACMを用いたSSL証明書の取得とALBのHTTS化
+- RDSのマルチAZ化：現状はシングルAZ構成のため、フェイルオーバー対応を検討したい
 
 
