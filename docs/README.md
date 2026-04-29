@@ -26,8 +26,8 @@ pushからデプロイ完了まで自動化をしています。(apply実行時�
 |:---:|:---:|:---:|
 | CI/CD | GitHub Actions | - |
 | IaC | Terraform | 1.14.8 |
-| デプロイ | Ansible |  |
-| アプリケーション | Spring Boot |  |
+| デプロイ | Ansible | 2.20.5 |
+| アプリケーション | Spring Boot | 3.4.1 |
 | クラウド | AWS | - |
 | OS | Amazon Linux 2023 | - |
 | データベース | MySQL | 8.0.43 |
