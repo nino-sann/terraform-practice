@@ -57,13 +57,13 @@ jobs:
           ansible-playbook playbooks/playbook.yml --syntax-check
 
       # 6. ドライラン (Check Mode)
-      #- name: Ansible Dry Run
-        #working-directory: ansible
-        #env:
-          #ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
-          #AWS_REGION: ap-northeast-1 # プラグイン（boto3）の安定動作のために必須
-        #run: |
-          #ansible-playbook playbooks/playbook.yml --check
+      - name: Ansible Dry Run
+        working-directory: ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          # AWS_REGION: ap-northeast-1 # プラグイン（boto3）の安定動作のために必須
+        run: |
+          ansible-playbook playbooks/playbook.yml --check
 
       # 7. Ansible実行（本番）    
       - name: Run Playbook
